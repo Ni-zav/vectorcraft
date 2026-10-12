@@ -120,6 +120,40 @@ fn double_click_selects_the_whole_field() {
     assert_eq!(f.selection(), Some((0, "100 px".len())));
 }
 
+/// A first click still selects the entire value when press and release arrive in separate frames.
+#[test]
+fn first_pointer_click_selects_all_after_release() {
+    let mut f = Field::new();
+    f.num(vec![]);
+    let at = f.rect.get().center();
+    let button = |pressed| Event::PointerButton { pos: at, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE };
+    f.num(vec![Event::PointerMoved(at), button(true)]);
+    assert_ne!(f.selection(), Some((0, "100 px".len())), "a press may still become a drag");
+    f.num(vec![button(false)]);
+    f.num(vec![]);
+    assert_eq!(f.selection(), Some((0, "100 px".len())));
+}
+
+/// Dragging from the unit suffix back into the digits on initial focus selects just that range.
+#[test]
+fn first_pointer_drag_preserves_text_selection() {
+    let mut f = Field::new();
+    f.num(vec![]);
+    let r = f.rect.get();
+    let (start, end) = (Pos2::new(r.left() + 43.0, r.center().y), Pos2::new(r.left() + 14.0, r.center().y));
+    let button = |pos, pressed| Event::PointerButton { pos, button: PointerButton::Primary, pressed, modifiers: Modifiers::NONE };
+    f.num(vec![Event::PointerMoved(start), button(start, true)]);
+    assert_ne!(f.selection(), Some((0, "100 px".len())), "the press must not select all");
+    f.num(vec![Event::PointerMoved(end)]);
+    f.num(vec![button(end, false)]);
+    f.num(vec![]);
+    let selection = f.selection();
+    assert!(
+        selection.is_some_and(|(a, b)| a < b && (a, b) != (0, "100 px".len())),
+        "drag should select part of the value, got {selection:?}"
+    );
+}
+
 #[test]
 fn plain_fields_do_math_with_their_suffix() {
     let mut f = Field::new();
