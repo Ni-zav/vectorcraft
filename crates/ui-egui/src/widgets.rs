@@ -309,10 +309,26 @@ fn select_all(ui: &Ui, id: egui::Id, text: &str) {
     st.store(ui.ctx(), id);
 }
 
-/// Numeric fields take the whole text, unit included, when they gain focus or are double-clicked
-/// (egui would select one word): typing a number or an expression replaces it.
+/// A click selects the whole numeric value, unit included, but a pointer drag keeps egui's
+/// normal text selection. Keyboard focus and double-click still select the whole value.
 fn select_all_on_focus(ui: &Ui, resp: &Response, text: &str) {
-    if !(resp.gained_focus() || resp.double_clicked()) {
+    let pending_id = resp.id.with("select-all-on-click");
+    let pointer_down = resp.is_pointer_button_down_on();
+    if resp.gained_focus() && pointer_down {
+        // Don't replace the cursor range while the first press may become a text-selection drag.
+        ui.data_mut(|d| d.insert_temp(pending_id, true));
+    }
+    let pending = ui.data(|d| d.get_temp::<bool>(pending_id)).unwrap_or(false);
+    let clicked_after_focus = pending && resp.clicked();
+    if pending && (ui.input(|i| i.pointer.any_released()) || !ui.memory(|m| m.has_focus(resp.id))) {
+        ui.data_mut(|d| {
+            d.remove_temp::<bool>(pending_id);
+        });
+    }
+    if !(resp.double_clicked()
+        || clicked_after_focus
+        || (resp.gained_focus() && !pointer_down && !resp.dragged() && !resp.drag_stopped()))
+    {
         return;
     }
     if egui::TextEdit::load_state(ui.ctx(), resp.id).is_some() {
