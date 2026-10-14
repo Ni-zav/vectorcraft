@@ -39,7 +39,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Load Color Profile…",
             [],
             None,
-            "{path: .icc/.icm file} register an ICC profile (native only) → {name, kind}",
+            "{path: .icc/.icm file} register an ICC profile for the current process only (native only; separate CLI run invocations must load it again; this does not install the profile) → {name, kind}",
             always,
             load_profile
         ),
