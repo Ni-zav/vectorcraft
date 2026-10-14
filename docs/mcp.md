@@ -102,6 +102,8 @@ The checks hold for every thread of the server process. A path is checked, then 
 that swaps a link in between can still win that race, so the roots keep an agent to the files it was
 given rather than guarding against other software on the computer.
 
+A profile loaded with `color.loadProfile` is registered only in the running VectorCraft process. A later `vectorcraft-cli run` invocation starts with the built-in profiles again; load the ICC file and select it with `edit.colorSettings` within the same invocation. Loading a profile does not install it system-wide.
+
 ## Protocol
 
 Newline-delimited JSON-RPC 2.0 on stdio. The revision is **`2025-06-18`**; `2025-03-26` and `2024-11-05` are
