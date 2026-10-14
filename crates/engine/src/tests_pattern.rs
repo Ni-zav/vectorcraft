@@ -145,6 +145,37 @@ fn set_fill_with_pattern_name_without_swatch() {
 }
 
 #[test]
+fn changing_pattern_swatch_preserves_the_objects_tile_transform() {
+    let mut s = session();
+    make_dots(&mut s);
+    let art = rect(&mut s, 20.0, 0.0, 10.0, 10.0);
+    s.execute("paint.setFill", &json!({"ids": [art.0], "color": "#0000ff"})).unwrap();
+    s.execute("object.pattern.make", &json!({"ids": [art.0], "name": "Bars", "edit": false})).unwrap();
+
+    let source = rect(&mut s, 30.0, 40.0, 80.0, 80.0);
+    let copied = rect(&mut s, 140.0, 40.0, 80.0, 80.0);
+    let fresh = rect(&mut s, 250.0, 40.0, 80.0, 80.0);
+    s.execute("paint.setFill", &json!({"ids": [source.0], "swatch": "Dots"})).unwrap();
+    let transform = [2.0, 0.0, 0.0, 2.0, 15.0, 10.0];
+    s.execute("pattern.transform", &json!({"ids": [source.0], "matrix": transform})).unwrap();
+    s.execute("appearance.copyFrom", &json!({"source": source.0, "ids": [copied.0]})).unwrap();
+
+    let paint = |s: &Session, id| node(s, id).appearance.fill_paint();
+    assert!(matches!(paint(&s, copied), Paint::Pattern { xf, .. } if xf.as_coeffs() == transform));
+
+    for id in [source, copied] {
+        s.execute("paint.setFill", &json!({"ids": [id.0], "swatch": "Bars"})).unwrap();
+        assert!(matches!(paint(&s, id), Paint::Pattern { pattern, xf } if pattern == "Bars" && xf.as_coeffs() == transform));
+    }
+
+    s.execute("paint.setFill", &json!({"ids": [fresh.0], "swatch": "Bars"})).unwrap();
+    assert!(matches!(paint(&s, fresh), Paint::Pattern { xf, .. } if xf == vectorcraft_geom::Affine::IDENTITY));
+
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert!(!matches!(paint(&s, fresh), Paint::Pattern { .. }));
+}
+
+#[test]
 fn options_set_tile_type_spacing_and_overlap() {
     let mut s = session();
     make_dots(&mut s);
