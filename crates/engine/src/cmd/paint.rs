@@ -457,7 +457,12 @@ fn apply_paint(s: &mut Session, p: &Value, paint: Paint, fill: bool) -> Result<V
             if !fill {
                 restore_unpainted_stroke(&mut n.appearance, index, &paint);
             }
-            let placed = place_paint(&paint, p, item_paint_bounds(n, index, fill));
+            let mut placed = place_paint(&paint, p, item_paint_bounds(n, index, fill));
+            if let (Paint::Pattern { xf: old, .. }, Paint::Pattern { xf, .. }) =
+                (n.appearance.paint_at(index, fill), &mut placed)
+            {
+                *xf = *old;
+            }
             n.appearance.set_paint_at(index, fill, placed);
             Ok(())
         },
